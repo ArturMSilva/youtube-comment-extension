@@ -1,0 +1,44 @@
+# Credenciais
+config.js
+.env
+.env.local
+.env.*.local
+
+# Dependências
+node_modules/
+**/node_modules/
+
+# Build / output
+dist/
+build/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+
+# Ferramentas locais
+.superpowers/
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+
+# SO
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+superpowers/
