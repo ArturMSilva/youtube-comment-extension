@@ -4,6 +4,8 @@
 
 Este documento detalha a concepção, arquitetura e funcionamento da extensão de navegador "YouTube Comment Q&A", um projeto que visa otimizar a interação do usuário com o vasto volume de comentários em vídeos de *reviews* de produtos no YouTube. A proposta central é mitigar a sobrecarga informacional, permitindo que os usuários obtenham *insights* relevantes de forma rápida e interativa, por meio de um sistema de Question Answering (Q&A) alimentado por Large Language Models (LLMs) e a arquitetura Retrieval-Augmented Generation (RAG).
 
+> **Nota de versão:** Este documento foi atualizado para refletir o estado atual e funcional do projeto. A solução foi implementada com um backend serverless em **Node.js/TypeScript hospedado na Vercel** e utiliza o modelo **Llama 3.3-70B via plataforma Groq** (com *fallback* para Mixtral 8x7B). Configurações anteriormente cogitadas (Python/Flask, Hugging Face com Mistral/Qwen) foram substituídas por essa stack durante o desenvolvimento.
+
 ## 2. Conceitos Fundamentais de Extensões de Navegador
 
 Extensões de navegador são pequenos programas de software que personalizam a experiência de navegação, adicionando funcionalidades ou modificando o comportamento de páginas web. Elas são construídas predominantemente com tecnologias web padrão (HTML, CSS, JavaScript) e operam dentro de um ambiente isolado, mas com capacidade de interagir com o conteúdo das páginas e com serviços externos.
@@ -52,17 +54,17 @@ A arquitetura da extensão é modular, dividida em componentes que se comunicam 
     *   Utiliza a **YouTube Data API v3** para coletar os comentários do vídeo. A coleta é paginada (`maxResults=100` por requisição) para garantir a recuperação de um volume significativo de comentários, iterando com `nextPageToken`.
     *   Os comentários coletados são armazenados temporariamente ou enviados para o Backend Proxy para processamento.
 
-3.  **Processamento e Q&A com LLM (via Backend Proxy):**
+3.  **Processamento e Q&A com LLM (via Backend Serverless):**
     *   Quando o usuário interage com o `Popup UI` (ex: faz uma pergunta), a pergunta é enviada ao `Service Worker`.
-    *   O `Service Worker` encaminha a pergunta e os comentários coletados (ou um resumo/embedding deles) para um **Backend Proxy**.
-    *   O Backend Proxy, implementado em Python/Flask (ou Node.js), é responsável por:
-        *   Proteger a chave de API do LLM (ex: Hugging Face Token).
+    *   O `Service Worker` encaminha a pergunta e os comentários coletados para o **Backend serverless** (endpoint `POST /api/ask` na Vercel).
+    *   O Backend, implementado em **Node.js/TypeScript** e hospedado na **Vercel (Serverless Functions)**, é responsável por:
+        *   Proteger a chave de API do LLM (`GROQ_API_KEY`), mantida como variável de ambiente no servidor.
         *   Receber a pergunta do usuário e os comentários.
         *   Aplicar a arquitetura **Retrieval-Augmented Generation (RAG)**:
-            *   **Retrieval:** Seleciona os trechos mais relevantes dos comentários que podem responder à pergunta do usuário.
-            *   **Augmentation:** Adiciona esses trechos relevantes ao *prompt* do LLM.
-            *   **Generation:** Envia o *prompt* enriquecido ao LLM (ex: Mistral-7B-Instruct-v0.2 ou Qwen/Qwen3-0.6B via Hugging Face Router) para gerar a resposta.
-        *   Retornar a resposta do LLM ao `Service Worker`.
+            *   **Retrieval:** Seleciona os trechos mais relevantes dos comentários por pontuação de palavras-chave (até os 30 comentários mais pertinentes).
+            *   **Augmentation:** Adiciona esses trechos relevantes ao *prompt* do LLM, numerados com suas contagens de *likes*.
+            *   **Generation:** Envia o *prompt* enriquecido ao LLM (**Llama 3.3-70B via Groq**, com *fallback* automático para **Mixtral 8x7B** em caso de *rate limit*) para gerar a resposta.
+        *   Retornar a resposta do LLM, junto com os comentários que a embasaram, ao `Service Worker`.
 
 4.  **Exibição da Resposta:**
     *   O `Service Worker` recebe a resposta do LLM do Backend Proxy.
@@ -75,29 +77,38 @@ A arquitetura da extensão é modular, dividida em componentes que se comunicam 
 | :--- | :--- | :--- |
 | **Desenvolvimento da Extensão** | HTML, CSS, JavaScript | Construção da interface (Popup UI) e lógica de interação (Content Script, Service Worker). |
 | **API de Coleta de Dados** | YouTube Data API v3 | Extração programática de comentários de vídeos do YouTube. |
-| **Backend Proxy** | Node.js | Servidor intermediário para proteger chaves de API, orquestrar chamadas a LLMs e implementar a lógica RAG. |
-| **Modelos de Linguagem (LLMs)** | Mistral-7B-Instruct-v0.2, Qwen/Qwen3-0.6B | Modelos de IA para compreensão de linguagem natural e geração de respostas. |
-| **Plataforma de Inferência LLM** | Hugging Face Inference API / Router | Serviço para hospedar e executar a inferência dos LLMs. |
+| **Backend Serverless** | Node.js + TypeScript (Vercel) | Servidor intermediário para proteger chaves de API, orquestrar chamadas a LLMs e implementar a lógica RAG. |
+| **Modelos de Linguagem (LLMs)** | Llama 3.3-70B (primário), Mixtral 8x7B (fallback) | Modelos de IA para compreensão de linguagem natural e geração de respostas. |
+| **Plataforma de Inferência LLM** | Groq API | Serviço de inferência de baixa latência para execução dos LLMs. |
+| **Testes** | Vitest | Testes automatizados do backend (filtro RAG e parsing das respostas). |
 | **Técnica de IA** | Retrieval-Augmented Generation (RAG) | Aprimora a precisão e a relevância das respostas do LLM, ancorando-as em informações recuperadas dos comentários. |
 
-## 6. Estado Atual do Projeto (Conforme Discussões)
+## 6. Estado Atual do Projeto
 
-O projeto está em fase de planejamento e prototipagem conceitual, com as seguintes etapas já definidas e algumas com rascunhos de implementação:
+O projeto está **funcional e testado de ponta a ponta**, operando sem erros. Todas as fases planejadas foram implementadas:
 
-*   **Fase 1: Estrutura e Extração de ID:** Os arquivos básicos da extensão (`manifest.json`, `popup.html`, `popup.css`, `content.js`) foram delineados. A lógica para extrair o `videoId` da URL do YouTube via `content.js` está concebida.
-*   **Fase 2: Coleta de Comentários com Paginação:** A estratégia para o `service-worker.js` realizar chamadas paginadas à YouTube Data API v3 para coletar comentários foi definida.
-*   **Fase 3: Interface e Comunicação:** A estrutura do `popup.js` para gerenciar a interface do usuário e a comunicação com o `service-worker.js` para enviar perguntas e receber respostas está planejada.
-*   **Fase 4: Integração com LLM (Q&A):** A necessidade de um **Backend Proxy** para segurança da chave de API e a implementação da lógica RAG foram estabelecidas. Modelos como Mistral-7B-Instruct-v0.2 e Qwen/Qwen3-0.6B (via Hugging Face Router) foram identificados como candidatos para testes.
+*   **Fase 1: Estrutura e Extração de ID:** Os arquivos da extensão (`manifest.json`, `popup.html`, `popup.css`, `content.js`) estão implementados. O `content.js` extrai o `videoId` da URL do YouTube e lida com a navegação SPA do site via `MutationObserver`.
+*   **Fase 2: Coleta de Comentários com Paginação:** O `service-worker.js` realiza chamadas paginadas à YouTube Data API v3 (100 comentários por página, até 5 páginas / 500 comentários), com controle de progresso.
+*   **Fase 3: Interface e Comunicação:** O `popup.js` gerencia a interface (coleta, pergunta e exibição de respostas + fontes), com persistência via `chrome.storage.local` e renderização segura contra XSS.
+*   **Fase 4: Integração com LLM (Q&A):** O **backend serverless na Vercel** (Node.js/TypeScript) está implementado e em produção, protegendo a `GROQ_API_KEY` e aplicando a lógica RAG. O modelo em uso é o **Llama 3.3-70B via Groq**, com *fallback* para **Mixtral 8x7B**.
+*   **Versionamento e Testes:** O código de ambos os módulos (extensão e backend) está versionado no GitHub, e o backend conta com testes automatizados em **Vitest**.
 
 ## 7. Desafios e Soluções Abordadas
 
 | Desafio | Solução Proposta |
 | :--- | :--- |
 | **Volume de Comentários (Paginação)** | Implementação de lógica de paginação no `Service Worker` para múltiplas chamadas à API do YouTube. |
-| **Segurança da Chave de API (LLM)** | Utilização de um **Backend Proxy** para intermediar as chamadas ao LLM, mantendo a chave de API no servidor e não na extensão. |
-| **Limite de Contexto do LLM** | Aplicação da arquitetura **RAG** para selecionar e enviar apenas os trechos mais relevantes dos comentários ao LLM, otimizando o uso do contexto. |
-| **Acesso a Modelos Gated (Hugging Face)** | Verificação e aceitação dos termos de uso na página do modelo no Hugging Face, ou uso de modelos totalmente públicos/alternativos para testes iniciais. |
+| **Segurança da Chave de API (LLM)** | Utilização de um **backend serverless** para intermediar as chamadas ao LLM, mantendo a `GROQ_API_KEY` como variável de ambiente no servidor e não na extensão. |
+| **Limite de Contexto do LLM** | Aplicação da arquitetura **RAG** para selecionar e enviar apenas os ~30 comentários mais relevantes ao LLM, otimizando o uso do contexto e o custo por requisição. |
+| **Disponibilidade e Latência do Modelo** | Uso da plataforma **Groq** (inferência de baixa latência) com **fallback automático** para um modelo secundário (Mixtral 8x7B) em caso de *rate limit* (HTTP 429). |
+| **Segurança no Navegador (CORS / XSS)** | CORS restrito a origens `chrome-extension://` e `http://localhost`; renderização dos comentários via `textContent` (nunca `innerHTML`) para prevenir XSS. |
 
 ## 8. Próximos Passos
 
-Os próximos passos envolvem a implementação prática das fases delineadas, com foco na construção do Backend Proxy, na integração dos componentes da extensão e na validação do fluxo completo de Q&A. Testes iterativos e depuração serão cruciais para garantir a funcionalidade e a robustez da solução. Este documento servirá como um guia para o desenvolvimento e a documentação do projeto ao longo do TCC.
+Com a solução já funcional e testada, os próximos passos envolvem a elaboração do **artigo / relatório técnico** do TCC e melhorias incrementais. Em destaque:
+
+*   **Documentação dos resultados:** registrar os testes realizados e os resultados obtidos para compor o relatório técnico.
+*   **Melhoria de segurança planejada:** mover também a chave da YouTube Data API para o backend, deixando a extensão sem nenhuma credencial exposta (atualmente a `API_KEY` do YouTube ainda fica no `config.js` da extensão).
+*   **Refinamentos do RAG:** avaliar técnicas de recuperação mais sofisticadas (ex: embeddings semânticos) como evolução do filtro atual por palavras-chave.
+
+Este documento servirá como guia para o desenvolvimento e a documentação do projeto ao longo do TCC.
