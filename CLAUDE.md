@@ -8,13 +8,16 @@ Chrome Extension (Manifest V3) that collects YouTube video comments via the YouT
 
 ## Repository Structure
 
+This extension and its backend are **two separate sibling git repositories** under `TCC/`, not a nested folder:
+
 ```
-youtube-comment/                          ← Extension root (loaded directly into Chrome)
-├── manifest.json                         ← MV3 manifest
-├── service-worker.js                     ← Background script (handles API calls)
-├── content.js                            ← Injected into YouTube pages (detects video ID)
-├── popup.html / popup.css / popup.js     ← Extension popup UI
-└── youtube-comment-analysis-backend/    ← Vercel serverless backend
+TCC/
+├── youtube-comment-extension/            ← This repo (loaded directly into Chrome)
+│   ├── manifest.json                     ← MV3 manifest
+│   ├── service-worker.js                 ← Background script (handles API calls)
+│   ├── content.js                        ← Injected into YouTube pages (detects video ID)
+│   └── popup.html / popup.css / popup.js ← Extension popup UI
+└── youtube-comment-backend/              ← Sibling repo — Vercel serverless backend
     ├── api/ask.ts                        ← Single endpoint: POST /api/ask
     ├── lib/retrieval.ts                  ← Keyword-scoring RAG filter
     ├── lib/llm.ts                        ← Groq API integration + response parser
@@ -27,7 +30,7 @@ youtube-comment/                          ← Extension root (loaded directly in
 
 ## Backend Commands
 
-All commands run from inside `youtube-comment-analysis-backend/`:
+All commands run from inside the sibling `youtube-comment-backend/` repo:
 
 ```bash
 npm test              # Run all tests once (vitest run)
@@ -74,7 +77,13 @@ The prompt instructs the model to end its response with `FONTES: [1, 3, 7]` (1-b
 |---|---|---|
 | `GROQ_API_KEY` | Vercel dashboard (never in code) | Groq API authentication |
 
-Local dev: add to `youtube-comment-analysis-backend/.env.local` (gitignored).
+Local dev: add to `youtube-comment-backend/.env` (gitignored).
+
+## Git Commit Conventions
+
+- **Commit messages must be written in Portuguese** (matches the existing history — see `git log`).
+- Keep the `type: descrição` prefix style (`feat:`, `fix:`, `chore:`, etc.) with the description in Portuguese.
+- **Do not add a `Co-Authored-By` trailer** to commits in this repository.
 
 ## Key Constraints
 
@@ -86,7 +95,6 @@ Local dev: add to `youtube-comment-analysis-backend/.env.local` (gitignored).
 
 ## Chrome Extension Loading
 
-Load the **root folder** (`youtube-comment/`) in Chrome, not the backend subfolder:
-- `chrome://extensions/` → Developer mode → Load unpacked → select `youtube-comment/`
+Load **this repo's root folder** (`youtube-comment-extension/`) in Chrome — the backend is a separate repo and is never loaded into Chrome:
+- `chrome://extensions/` → Developer mode → Load unpacked → select `youtube-comment-extension/`
 - After changing extension files, click the reload (↻) icon on the extension card.
-- The backend subfolder is ignored by Chrome.
