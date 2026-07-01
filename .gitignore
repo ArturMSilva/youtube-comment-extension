@@ -40,5 +40,3 @@ $RECYCLE.BIN/
 *.log
 npm-debug.log*
 yarn-error.log*
-
-superpowers/
