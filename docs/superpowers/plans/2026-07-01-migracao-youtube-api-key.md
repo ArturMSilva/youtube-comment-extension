@@ -53,7 +53,7 @@ Refatoração sem mudança de comportamento — prepara o terreno para o novo en
 **Interfaces:**
 - Produces: `applyCORS(req: VercelRequest, res: VercelResponse, methods: string): boolean` — `true` = preflight já respondido, handler deve retornar; `false` = seguir.
 
-- [ ] **Step 1: Criar `lib/cors.ts`**
+- [x] **Step 1: Criar `lib/cors.ts`**
 
 ```ts
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -76,7 +76,7 @@ export function applyCORS(req: VercelRequest, res: VercelResponse, methods: stri
 }
 ```
 
-- [ ] **Step 2: Atualizar `api/ask.ts` para usar o helper**
+- [x] **Step 2: Atualizar `api/ask.ts` para usar o helper**
 
 Substituir:
 ```ts
@@ -117,12 +117,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (applyCORS(req, res, 'POST, OPTIONS')) return
 ```
 
-- [ ] **Step 3: Rodar a suíte completa e o lint**
+- [x] **Step 3: Rodar a suíte completa e o lint**
 
 Run: `npm test && npm run lint`
 Expected: PASS — os 25 testes existentes continuam verdes (nenhum comportamento mudou).
 
-- [ ] **Step 4: Smoke test manual do CORS (preflight)**
+- [x] **Step 4: Smoke test manual do CORS (preflight)**
 
 Com o dev server rodando (`node --env-file=.env -r ts-node/register scripts/dev-server.ts`):
 ```bash
@@ -132,7 +132,7 @@ curl -s -i -X OPTIONS http://localhost:3000/api/ask \
 ```
 Expected: `HTTP/1.1 204`, header `Access-Control-Allow-Origin: chrome-extension://abcxyz` presente.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/cors.ts api/ask.ts
@@ -169,7 +169,7 @@ git commit -m "refactor: extrai applyCORS para lib/cors.ts (reuso entre endpoint
   ```
   Lança `Error` (não retorna `{success:false}`) quando a API do YouTube responde com erro — mesmo estilo de `askGroq` em `lib/llm.ts`, que também propaga exceções.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 Criar `tests/youtube.test.ts`:
 ```ts
@@ -257,12 +257,12 @@ describe('fetchYouTubeComments', () => {
 })
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `npx vitest run tests/youtube.test.ts`
 Expected: FAIL — `Failed to resolve import '../lib/youtube'` (arquivo ainda não existe).
 
-- [ ] **Step 3: Implementar `fetchYouTubeComments`**
+- [x] **Step 3: Implementar `fetchYouTubeComments`**
 
 Criar `lib/youtube.ts`:
 ```ts
@@ -353,17 +353,17 @@ export async function fetchYouTubeComments(
 }
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `npx vitest run tests/youtube.test.ts`
 Expected: PASS (4 testes). O teste de `MAX_PAGES` leva ~400ms de vida real por causa do delay entre páginas — normal.
 
-- [ ] **Step 5: Rodar lint**
+- [x] **Step 5: Rodar lint**
 
 Run: `npm run lint`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/youtube.ts tests/youtube.test.ts
@@ -379,7 +379,7 @@ git commit -m "feat: adiciona fetchYouTubeComments (paginacao da YouTube Data AP
 - Modify: `youtube-comment-backend/vercel.json`
 - Modify: `youtube-comment-backend/.env.example`
 
-- [ ] **Step 1: Criar `api/comments.ts`**
+- [x] **Step 1: Criar `api/comments.ts`**
 
 ```ts
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -407,7 +407,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 ```
 
-- [ ] **Step 2: Adicionar build e rota em `vercel.json`**
+- [x] **Step 2: Adicionar build e rota em `vercel.json`**
 
 Substituir:
 ```json
@@ -464,7 +464,7 @@ por:
 }
 ```
 
-- [ ] **Step 3: Documentar `YOUTUBE_API_KEY` em `.env.example`**
+- [x] **Step 3: Documentar `YOUTUBE_API_KEY` em `.env.example`**
 
 Conteúdo final de `.env.example`:
 ```
@@ -473,19 +473,19 @@ GEMINI_API_KEY=sua_chave_gemini_aqui
 YOUTUBE_API_KEY=sua_chave_youtube_aqui
 ```
 
-- [ ] **Step 4: Rodar suíte completa e lint**
+- [x] **Step 4: Rodar suíte completa e lint**
 
 Run: `npm test && npm run lint`
 Expected: PASS.
 
-- [ ] **Step 5: Smoke test manual (requer `YOUTUBE_API_KEY` real no `.env` e um `videoId` válido)**
+- [x] **Step 5: Smoke test manual (requer `YOUTUBE_API_KEY` real no `.env` e um `videoId` válido)**
 
 ```bash
 curl -s "http://localhost:3000/api/comments?videoId=SEU_VIDEO_ID_AQUI"
 ```
 Expected: HTTP 200 com `{ comments: [...], totalComments, pagesCollected, limitReached }`. Se `YOUTUBE_API_KEY` não estiver configurada no `.env` local, pule este passo — a lógica já está coberta pelos testes determinísticos com mock.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add api/comments.ts vercel.json .env.example
@@ -499,7 +499,7 @@ git commit -m "feat: adiciona endpoint GET /api/comments (move a YouTube API key
 **Files:**
 - Modify: `youtube-comment-extension/service-worker.js`
 
-- [ ] **Step 1: Remover o import de `API_KEY` e a função `fetchComments`**
+- [x] **Step 1: Remover o import de `API_KEY` e a função `fetchComments`**
 
 Substituir a linha 1:
 ```js
@@ -512,7 +512,7 @@ import { BACKEND_URL } from './config.js';
 
 Remover inteiramente a função `fetchComments` (linhas 8–106, do `async function fetchComments(videoId, apiKey, onProgress = null) {` até o `}` de fechamento antes de `async function callLLM`).
 
-- [ ] **Step 2: Adicionar `fetchCommentsFromBackend` no lugar**
+- [x] **Step 2: Adicionar `fetchCommentsFromBackend` no lugar**
 
 Adicionar, no lugar onde estava `fetchComments` (acima de `callLLM`):
 ```js
@@ -558,7 +558,7 @@ async function fetchCommentsFromBackend(videoId, onProgress = null) {
 
 > Nota: como a coleta agora é uma única chamada HTTP síncrona ao backend (sem streaming de progresso por página), `onProgress` é chamado uma única vez no início — o popup ainda mostra o estado "coletando", só não recebe mais atualizações incrementais por página. Isso é uma simplificação deliberada (ver `docs/migracao-youtube-api-para-backend.md`, seção Observações — SSE/WebSocket seria overkill para o TCC).
 
-- [ ] **Step 3: Trocar a chamada e remover a checagem de `API_KEY`**
+- [x] **Step 3: Trocar a chamada e remover a checagem de `API_KEY`**
 
 No listener de `START_COMMENT_COLLECTION`, substituir:
 ```js
@@ -615,7 +615,7 @@ por:
                 const result = await fetchCommentsFromBackend(videoId, onProgress);
 ```
 
-- [ ] **Step 4: Remover o aviso de `API_KEY` no `onInstalled`**
+- [x] **Step 4: Remover o aviso de `API_KEY` no `onInstalled`**
 
 Substituir:
 ```js
@@ -641,7 +641,7 @@ Não há suíte de testes automatizados para a extensão (JavaScript puro, sem f
 3. Confirmar no console do service worker (`chrome://extensions/` → "Inspecionar visualizações: service worker") que a chamada vai para `{BACKEND_URL}/api/comments`, não mais para `googleapis.com`.
 4. Confirmar que os comentários aparecem e que perguntar ao LLM continua funcionando.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add service-worker.js
@@ -657,7 +657,7 @@ git commit -m "feat: busca comentarios via backend (GET /api/comments) em vez da
 - Modify: `youtube-comment-extension/config.js` (gitignored — editar localmente, não gera commit)
 - Modify: `youtube-comment-extension/manifest.json`
 
-- [ ] **Step 1: Atualizar `config.example.js`**
+- [x] **Step 1: Atualizar `config.example.js`**
 
 Substituir:
 ```js
@@ -669,7 +669,7 @@ por:
 export const BACKEND_URL = '';
 ```
 
-- [ ] **Step 2: Atualizar `config.js` local (não commitar — arquivo gitignored)**
+- [x] **Step 2: Atualizar `config.js` local (não commitar — arquivo gitignored)**
 
 Substituir:
 ```js
@@ -683,7 +683,7 @@ export const BACKEND_URL = 'http://localhost:3000';
 
 > A chave antiga do YouTube que estava neste arquivo deve ser considerada exposta (estava em texto puro no disco). Se ainda for válida, regenere-a no [Google Cloud Console](https://console.cloud.google.com/apis/credentials) e configure a nova como `YOUTUBE_API_KEY` nas env vars da Vercel — nunca de volta em `config.js`.
 
-- [ ] **Step 3: Remover a permissão `googleapis.com` do `manifest.json`**
+- [x] **Step 3: Remover a permissão `googleapis.com` do `manifest.json`**
 
 Substituir:
 ```json
@@ -705,7 +705,7 @@ O service worker não faz mais chamadas diretas a `googleapis.com` — só ao ba
 
 Recarregar a extensão em `chrome://extensions/` e repetir o fluxo do Task 4 Step 5. Confirmar que a extensão funciona sem a permissão de `googleapis.com`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add config.example.js manifest.json
@@ -724,7 +724,7 @@ git commit -m "chore: remove API_KEY do YouTube da extensao e permissao googleap
 - Modify: `youtube-comment-extension/README.md`
 - Modify: `youtube-comment-extension/docs/migracao-youtube-api-para-backend.md`
 
-- [ ] **Step 1: Backend `CLAUDE.md` — documentar o novo endpoint**
+- [x] **Step 1: Backend `CLAUDE.md` — documentar o novo endpoint**
 
 Adicionar ao final da seção `## Key Constraints` (ou criar se não existir mais no arquivo atual):
 ```markdown
@@ -734,7 +734,7 @@ Adicionar ao final da seção `## Key Constraints` (ou criar se não existir mai
 - `GET /api/comments?videoId=` — busca comentários de um vídeo do YouTube (a `YOUTUBE_API_KEY` fica só aqui, nunca na extensão).
 ```
 
-- [ ] **Step 2: Extensão `CLAUDE.md` — remover menção à chave hardcoded**
+- [x] **Step 2: Extensão `CLAUDE.md` — remover menção à chave hardcoded**
 
 Substituir:
 ```markdown
@@ -752,7 +752,7 @@ E na tabela de variáveis de ambiente, adicionar:
 | `YOUTUBE_API_KEY` | Vercel dashboard (never in code) | YouTube Data API authentication (used only by `/api/comments`) |
 ```
 
-- [ ] **Step 3: `README.md` — corrigir estrutura de repositórios (linhas 122–145)**
+- [x] **Step 3: `README.md` — corrigir estrutura de repositórios (linhas 122–145)**
 
 Substituir:
 ```
@@ -807,7 +807,7 @@ TCC/
     └── vercel.json                       ← configuração de deploy
 ```
 
-- [ ] **Step 4: `README.md` — atualizar tabela de `host_permissions` (linha 160)**
+- [x] **Step 4: `README.md` — atualizar tabela de `host_permissions` (linha 160)**
 
 Substituir:
 ```
@@ -818,7 +818,7 @@ por:
 | `host_permissions` | `*.vercel.app` | Requisições externas no MV3 precisam de declaração (a extensão não fala mais direto com `googleapis.com`) |
 ```
 
-- [ ] **Step 5: `README.md` — atualizar descrição do `service-worker.js` (linhas 179–194)**
+- [x] **Step 5: `README.md` — atualizar descrição do `service-worker.js` (linhas 179–194)**
 
 Substituir:
 ```
@@ -855,7 +855,7 @@ por:
 > **Atenção**: `BACKEND_URL` é uma constante em `config.js` (gitignored). Atualize-a após cada novo deploy na Vercel.
 ```
 
-- [ ] **Step 6: `README.md` — atualizar seção de segurança (linhas 401, 409–411)**
+- [x] **Step 6: `README.md` — atualizar seção de segurança (linhas 401, 409–411)**
 
 Substituir:
 ```
@@ -879,7 +879,7 @@ por:
 | `GROQ_API_KEY`, `YOUTUBE_API_KEY` (local) | `youtube-comment-backend/.env` | Para desenvolvimento local |
 ```
 
-- [ ] **Step 7: Marcar `docs/migracao-youtube-api-para-backend.md` como implementado**
+- [x] **Step 7: Marcar `docs/migracao-youtube-api-para-backend.md` como implementado**
 
 Substituir a primeira linha:
 ```
@@ -890,7 +890,7 @@ por:
 **Status:** ✅ Implementado (2026-07-01) — ver `docs/superpowers/plans/2026-07-01-migracao-youtube-api-key.md`
 ```
 
-- [ ] **Step 8: Commit (um commit por repositório)**
+- [x] **Step 8: Commit (um commit por repositório)**
 
 ```bash
 # no youtube-comment-backend
@@ -906,12 +906,12 @@ git commit -m "docs: atualiza documentacao apos migracao da youtube api key"
 
 ## Verificação final (após todas as tasks)
 
-- [ ] Backend: `npm test` → toda a suíte verde (incluindo os 4 testes novos de `youtube.test.ts`).
-- [ ] Backend: `npm run lint` → sem erros de tipo.
-- [ ] Extensão carregada em modo unpacked funciona ponta a ponta: coletar comentários → perguntar → ver resposta com fontes.
-- [ ] `config.js` local não contém mais `API_KEY` do YouTube.
-- [ ] `manifest.json` não declara mais `host_permissions` para `googleapis.com`.
-- [ ] Atualizar a memória do projeto sobre esta migração (estava marcada como "pendente, não implementar ainda").
+- [x] Backend: `npm test` → toda a suíte verde (incluindo os 4 testes novos de `youtube.test.ts`).
+- [x] Backend: `npm run lint` → sem erros de tipo.
+- [ ] Extensão carregada em modo unpacked funciona ponta a ponta: coletar comentários → perguntar → ver resposta com fontes. **Não verificado — sem acesso a navegador neste ambiente.**
+- [x] `config.js` local não contém mais `API_KEY` do YouTube.
+- [x] `manifest.json` não declara mais `host_permissions` para `googleapis.com`.
+- [x] Atualizar a memória do projeto sobre esta migração (estava marcada como "pendente, não implementar ainda").
 
 **Ações manuais fora do escopo deste plano (requerem acesso ao dashboard da Vercel — não automatizadas aqui):**
 - [ ] Adicionar `YOUTUBE_API_KEY` nas env vars do projeto na Vercel.

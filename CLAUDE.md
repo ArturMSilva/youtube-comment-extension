@@ -18,9 +18,13 @@ TCC/
 │   ├── content.js                        ← Injected into YouTube pages (detects video ID)
 │   └── popup.html / popup.css / popup.js ← Extension popup UI
 └── youtube-comment-backend/              ← Sibling repo — Vercel serverless backend
-    ├── api/ask.ts                        ← Single endpoint: POST /api/ask
-    ├── lib/retrieval.ts                  ← Keyword-scoring RAG filter
+    ├── api/ask.ts                        ← POST /api/ask
+    ├── api/comments.ts                   ← GET /api/comments?videoId=
+    ├── lib/retrieval.ts                  ← Keyword + semantic RAG filter, dispatcher
+    ├── lib/embeddings.ts                 ← Gemini embeddings (semantic search)
+    ├── lib/youtube.ts                    ← YouTube Data API pagination
     ├── lib/llm.ts                        ← Groq API integration + response parser
+    ├── lib/cors.ts                       ← Shared CORS handling
     ├── types.ts                          ← Shared TypeScript interfaces
     ├── tests/                            ← Vitest unit tests
     ├── package.json
@@ -49,7 +53,7 @@ npx vitest run tests/retrieval.test.ts
 ### Extension → Backend
 
 1. **content.js** detects `?v=` in the YouTube URL and sends `VIDEO_ID_FOUND` to the service worker via `chrome.runtime.sendMessage`.
-2. **popup.js** triggers `START_COMMENT_COLLECTION` → **service-worker.js** fetches comments from YouTube Data API (`/commentThreads`) in pages of 100, up to 500 comments / 5 pages.
+2. **popup.js** triggers `START_COMMENT_COLLECTION` → **service-worker.js** calls `GET {BACKEND_URL}/api/comments?videoId=` → backend fetches comments from the YouTube Data API (`/commentThreads`) in pages of 100, up to 500 comments / 5 pages, and returns them all at once. The extension never talks to `googleapis.com` directly and never holds a YouTube API key.
 3. When the user asks a question, popup.js sends `ASK_LLM { question, comments, videoId }` to the service worker.
 4. **service-worker.js** → `POST /api/ask` on the Vercel backend → receives `{ resposta, comentarios_fonte[] }` → sends `LLM_RESPONSE` back to popup.
 5. **popup.js** renders the answer in `#llm-response` and source comment cards in `#source-list`.
@@ -57,15 +61,23 @@ npx vitest run tests/retrieval.test.ts
 ### Backend Pipeline (api/ask.ts)
 
 ```
-Request → CORS check → input validation → filterRelevantComments (top-30 by keyword score)
+Request → CORS check → input validation → selectRelevantComments(method, ...)
+        → keyword: filterRelevantComments (top-30 by keyword score)
+        → semantic: semanticFilterComments (top-30 by cosine similarity over Gemini embeddings)
         → askGroq (llama-3.3-70b-versatile, fallback: mixtral-8x7b-32768 on 429)
         → parseResponse (extracts FONTES: [1,3] indices from LLM output)
         → { resposta, comentarios_fonte[] }
 ```
 
+`method: 'keyword' | 'semantic'` in the request body picks the filter (default `keyword`). If the semantic path fails to reach Gemini, the endpoint returns an explicit `502` — no silent fallback to keyword.
+
 ### RAG Strategy (lib/retrieval.ts)
 
-Keywords are extracted from the question (words > 3 chars). Comments are scored by keyword frequency. If no matches, falls back to top-N by like count. Sends at most 30 comments to the LLM.
+**Keyword (default):** keywords are extracted from the question (words > 3 chars). Comments are scored by keyword frequency. If no matches, falls back to top-N by like count.
+
+**Semantic:** the question and all comments are embedded via Gemini `text-embedding-004` (`lib/embeddings.ts`); comments are ranked by cosine similarity to the question.
+
+Both methods send at most 30 comments to the LLM.
 
 ### LLM Response Format
 
@@ -76,6 +88,8 @@ The prompt instructs the model to end its response with `FONTES: [1, 3, 7]` (1-b
 | Variable | Location | Purpose |
 |---|---|---|
 | `GROQ_API_KEY` | Vercel dashboard (never in code) | Groq API authentication |
+| `GEMINI_API_KEY` | Vercel dashboard (never in code) | Gemini embeddings for semantic search (`method: 'semantic'`) |
+| `YOUTUBE_API_KEY` | Vercel dashboard (never in code) | YouTube Data API authentication, used only by `/api/comments` |
 
 Local dev: add to `youtube-comment-backend/.env` (gitignored).
 
@@ -89,8 +103,8 @@ Local dev: add to `youtube-comment-backend/.env` (gitignored).
 
 - **CORS**: The backend only sets `Access-Control-Allow-Origin` for `chrome-extension://` origins and `http://localhost`. Do not widen this.
 - **MV3**: The extension uses Manifest V3. The service worker (`service-worker.js`) is an ES module (`"type": "module"`). No persistent background pages.
-- **`BACKEND_URL`**: Hardcoded in `service-worker.js` line 2. Must be updated after each new Vercel deployment URL.
-- **YouTube API key**: Hardcoded in `service-worker.js` line 1 (`API_KEY`). Acceptable for TCC/academic use.
+- **`BACKEND_URL`**: A constant exported from `config.js` (gitignored, copied from `config.example.js`). Must be updated after each new Vercel deployment URL.
+- **YouTube API key**: Lives only in the backend as `YOUTUBE_API_KEY` (Vercel env var). The extension never sees it — comments are fetched via `GET {BACKEND_URL}/api/comments?videoId=`.
 - **XSS**: Comment text must always be set via `textContent`, never `innerHTML` (popup.js uses `createElement` + `textContent` for this reason).
 
 ## Chrome Extension Loading

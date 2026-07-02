@@ -83,11 +83,13 @@ YouTube tab carrega
 Usuário clica "Analisar Comentários"
     └─▶ popup.js → START_COMMENT_COLLECTION {videoId}
             └─▶ service-worker.js
-                    └─▶ YouTube Data API /commentThreads
-                            paginação: 100 comentários/página
-                            até 5 páginas (max 500 comentários)
-                            delay de 100ms entre páginas
-                            progresso: COLLECTING_STATUS a cada página
+                    └─▶ GET /api/comments?videoId= (Vercel)
+                            └─▶ api/comments.ts
+                                    └─▶ YouTube Data API /commentThreads
+                                            paginação: 100 comentários/página
+                                            até 5 páginas (max 500 comentários)
+                                            delay de 100ms entre páginas
+                                    └─▶ { comments[], totalComments, pagesCollected, limitReached }
                     └─▶ COMMENTS_COLLECTED {comments[], totalComments}
                             └─▶ popup.js salva em chrome.storage.local
                                 popup exibe interface de perguntas
@@ -120,24 +122,26 @@ Usuário digita pergunta e pressiona "Perguntar"
 ## 4. Estrutura do repositório
 
 ```
-youtube-comment/                          ← raiz carregada no Chrome
+TCC/
+├── youtube-comment-extension/            ← este repo (raiz carregada no Chrome)
+│   ├── manifest.json                     ← MV3: permissões, scripts, ícones
+│   ├── content.js                        ← injetado em *.youtube.com
+│   ├── service-worker.js                 ← background (ES module)
+│   ├── popup.html                        ← markup da UI do popup
+│   ├── popup.css                         ← estilos (preto/branco/cinza)
+│   └── popup.js                          ← lógica do popup
 │
-├── manifest.json                         ← MV3: permissões, scripts, ícones
-├── content.js                            ← injetado em *.youtube.com
-├── service-worker.js                     ← background (ES module)
-├── popup.html                            ← markup da UI do popup
-├── popup.css                             ← estilos (preto/branco/cinza)
-├── popup.js                              ← lógica do popup
-│
-└── youtube-comment-analysis-backend/    ← backend serverless (Vercel)
+└── youtube-comment-backend/              ← repo irmão — backend serverless (Vercel)
     ├── api/
-    │   └── ask.ts                        ← endpoint POST /api/ask
+    │   ├── ask.ts                        ← endpoint POST /api/ask
+    │   └── comments.ts                   ← endpoint GET /api/comments
     ├── lib/
-    │   ├── retrieval.ts                  ← filtro de relevância (RAG)
-    │   └── llm.ts                        ← integração Groq + parser
+    │   ├── retrieval.ts                  ← filtro de relevância (RAG, keyword + semantic)
+    │   ├── embeddings.ts                 ← embeddings Gemini (busca semântica)
+    │   ├── youtube.ts                    ← paginação da YouTube Data API
+    │   ├── llm.ts                        ← integração Groq + parser
+    │   └── cors.ts                       ← CORS compartilhado entre endpoints
     ├── tests/
-    │   ├── retrieval.test.ts             ← testes do filtro RAG
-    │   └── llm.test.ts                   ← testes do parseResponse
     ├── types.ts                          ← interfaces TypeScript compartilhadas
     ├── package.json
     ├── tsconfig.json
@@ -157,7 +161,7 @@ Declara a extensão no formato **Manifest V3**. Pontos relevantes:
 | `manifest_version` | `3` | Obrigatório no Chrome desde 2023 |
 | `background.type` | `"module"` | Permite `import`/`export` no service worker |
 | `permissions` | `activeTab`, `scripting`, `tabs`, `storage` | Acesso à aba atual e armazenamento local |
-| `host_permissions` | `googleapis.com`, `*.vercel.app` | Requisições externas no MV3 precisam de declaração |
+| `host_permissions` | `*.vercel.app` | Requisições externas no MV3 precisam de declaração (a extensão não fala mais direto com `googleapis.com`) |
 | `content_scripts.matches` | `*://*.youtube.com/*` | Injeta `content.js` apenas no YouTube |
 
 ### `content.js`
@@ -177,21 +181,19 @@ Background script persistente (ES module, MV3). É o único componente que faz c
 | Mensagem recebida | Ação |
 |---|---|
 | `VIDEO_ID_FOUND` | Registra o videoId, repassa ao popup |
-| `START_COMMENT_COLLECTION` | Chama YouTube Data API em loop paginado |
+| `START_COMMENT_COLLECTION` | Chama `GET /api/comments?videoId=` no backend |
 | `ASK_LLM` | Faz `POST /api/ask` no backend e repassa resposta |
 
-**Coleta de comentários** (`fetchComments`):
-- Endpoint: `GET /youtube/v3/commentThreads?part=snippet&order=relevance`
-- Paginação de 100 em 100, máximo 5 páginas (500 comentários)
-- Delay de 100 ms entre páginas para evitar rate limiting
-- Emite `COLLECTING_STATUS` a cada página para atualizar o progresso no popup
+**Coleta de comentários** (`fetchCommentsFromBackend`):
+- `GET {BACKEND_URL}/api/comments?videoId=...` — o backend faz a paginação na YouTube Data API (100 por página, máximo 5 páginas / 500 comentários) e devolve tudo de uma vez
+- A `YOUTUBE_API_KEY` nunca chega à extensão — fica só como env var no backend
 
 **Chamada ao backend** (`callLLM`):
 - Serializa a pergunta e os comentários em JSON
 - `POST /api/ask` com `Content-Type: application/json`
 - Retorna `{ resposta: string, comentarios_fonte: Comment[] }`
 
-> **Atenção**: `BACKEND_URL` (linha 2) e `API_KEY` da YouTube (linha 1) são constantes hardcoded. Atualize `BACKEND_URL` após cada novo deploy na Vercel.
+> **Atenção**: `BACKEND_URL` é uma constante em `config.js` (gitignored). Atualize-a após cada novo deploy na Vercel.
 
 ### `popup.html` / `popup.css` / `popup.js`
 
@@ -398,7 +400,7 @@ A pergunta do usuário é truncada em 500 caracteres antes de chegar ao LLM, lim
 
 ### Chave de API
 
-A `GROQ_API_KEY` nunca aparece no código — existe apenas como variável de ambiente na Vercel (dashboard) e no arquivo `.env.local` local (gitignored). A chave da YouTube Data API fica em `config.js` (gitignored) e nunca é versionada.
+A `GROQ_API_KEY`, a `GEMINI_API_KEY` e a `YOUTUBE_API_KEY` nunca aparecem no código — existem apenas como variáveis de ambiente na Vercel (dashboard) e no `.env` local do backend (gitignored). A extensão não guarda nenhuma chave de API; `config.js` só tem `BACKEND_URL`.
 
 ---
 
@@ -407,8 +409,9 @@ A `GROQ_API_KEY` nunca aparece no código — existe apenas como variável de am
 | Variável | Onde configurar | Descrição |
 |---|---|---|
 | `GROQ_API_KEY` | Vercel dashboard → Environment Variables | Autenticação na API Groq |
-| `GROQ_API_KEY` (local) | `youtube-comment-analysis-backend/.env.local` | Para desenvolvimento local |
-| `API_KEY` | `config.js` (extensão) | Chave da YouTube Data API v3 |
+| `GEMINI_API_KEY` | Vercel dashboard → Environment Variables | Embeddings para busca semântica (`method: 'semantic'`) |
+| `YOUTUBE_API_KEY` | Vercel dashboard → Environment Variables | Autenticação na YouTube Data API v3 (usada só por `/api/comments`) |
+| `GROQ_API_KEY`, `GEMINI_API_KEY`, `YOUTUBE_API_KEY` (local) | `youtube-comment-backend/.env` | Para desenvolvimento local |
 | `BACKEND_URL` | `config.js` (extensão) | URL do backend Vercel |
 
 O arquivo `config.example.js` serve de referência. Nunca faça commit do `config.js`.
@@ -420,7 +423,7 @@ O arquivo `config.example.js` serve de referência. Nunca faça commit do `confi
 ### Backend
 
 ```bash
-cd youtube-comment-analysis-backend
+cd ../youtube-comment-backend
 npm install
 npx vercel dev        # servidor em http://localhost:3000
 ```
@@ -433,7 +436,7 @@ npx vercel dev        # servidor em http://localhost:3000
    ```
 2. Abra `chrome://extensions/`
 3. Ative **Modo do desenvolvedor**
-4. **Carregar sem compactação** → selecione a pasta raiz `youtube-comment/`
+4. **Carregar sem compactação** → selecione a pasta raiz `youtube-comment-extension/`
 5. Após alterar qualquer arquivo da extensão, clique no ícone ↻ na página de extensões
 
 ### Teste rápido do endpoint (PowerShell)
@@ -447,34 +450,27 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/ask" -Method Post -ContentType
 
 ## 12. Testes
 
-Os testes ficam em `youtube-comment-analysis-backend/tests/` e usam **Vitest**.
+Os testes ficam em `youtube-comment-backend/tests/` e usam **Vitest**.
 
 ```bash
-cd youtube-comment-analysis-backend
+cd ../youtube-comment-backend
 npm test              # executa todos os testes uma vez
 npm run test:watch    # modo watch (re-executa ao salvar)
 ```
 
-### Cobertura atual
+### Cobertura atual (29 testes)
 
-**`retrieval.test.ts`** — 4 testes:
-- Retorna apenas comentários com keywords da pergunta
-- Fallback para top por likes quando nenhum keyword bate
-- Respeita o limite `topN`
-- Retorna array vazio para lista de comentários vazia
-
-**`llm.test.ts`** — 4 testes:
-- Extrai corretamente índices do `FONTES: [...]`
-- Remove a linha FONTES do texto exibido
-- Lida com resposta sem linha FONTES
-- Mapeia índices para os objetos Comment corretos
+- **`retrieval.test.ts`** — filtro por keyword, filtro semântico (cosine sobre embeddings mockados) e o dispatcher `selectRelevantComments`
+- **`embeddings.test.ts`** — `cosineSimilarity`, `chunk`, `embedQuery`/`embedDocuments` com cliente Gemini mockado
+- **`youtube.test.ts`** — paginação de `fetchYouTubeComments`, limites de `MAX_PAGES`/`MAX_COMMENTS`, erro explícito em falha da API
+- **`llm.test.ts`** — parsing do formato `FONTES: [...]` da resposta do Groq
 
 ---
 
 ## 13. Deploy em produção
 
 ```bash
-cd youtube-comment-analysis-backend
+cd ../youtube-comment-backend
 npx vercel --prod
 ```
 

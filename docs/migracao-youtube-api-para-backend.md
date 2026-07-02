@@ -1,6 +1,6 @@
 # Migração: YouTube API Key para o Backend
 
-**Status:** Pendente — não implementar ainda  
+**Status:** ✅ Implementado (2026-07-01) — ver `docs/superpowers/plans/2026-07-01-migracao-youtube-api-key.md`  
 **Motivação:** A `API_KEY` do YouTube atualmente fica exposta na extensão (`config.js`), visível para qualquer usuário que inspecione os arquivos locais ou o tráfego de rede. A solução é mover todas as chamadas à YouTube Data API para o backend Vercel, onde a chave fica como variável de ambiente segura.
 
 ---
@@ -151,15 +151,15 @@ Remover a linha `API_KEY` do arquivo local de quem desenvolve.
 
 Quando chegar a hora:
 
-- [ ] Criar `api/comments.ts` no backend com a lógica de paginação migrada de `service-worker.js`
-- [ ] Adicionar `YOUTUBE_API_KEY` nas env vars da Vercel (dashboard)
-- [ ] Adicionar `YOUTUBE_API_KEY` no `.env.local` para dev local
-- [ ] Escrever testes em `tests/comments.test.ts` (seguir padrão de `retrieval.test.ts`)
-- [ ] Atualizar `service-worker.js`: remover `API_KEY` import e função `fetchComments()`
-- [ ] Atualizar `config.example.js` e `config.js` local: remover `API_KEY`
-- [ ] Fazer deploy no Vercel e atualizar `BACKEND_URL` em `config.js`
-- [ ] Testar na extensão carregada em modo unpacked
-- [ ] Atualizar `CLAUDE.md`: remover menção à YouTube API key hardcoded
+- [x] Criar `api/comments.ts` no backend com a lógica de paginação migrada de `service-worker.js`
+- [ ] Adicionar `YOUTUBE_API_KEY` nas env vars da Vercel (dashboard) — ação manual, não feita
+- [ ] Adicionar `YOUTUBE_API_KEY` no `.env` local para dev local — documentado em `.env.example`, mas a chave real não foi adicionada (ninguém forneceu uma)
+- [x] Escrever testes (`tests/youtube.test.ts`, cobrindo `fetchYouTubeComments` — a lógica que `api/comments.ts` consome)
+- [x] Atualizar `service-worker.js`: remover `API_KEY` import e função `fetchComments()`
+- [x] Atualizar `config.example.js` e `config.js` local: remover `API_KEY`
+- [ ] Fazer deploy no Vercel e atualizar `BACKEND_URL` em `config.js` — ação manual, não feita
+- [ ] Testar na extensão carregada em modo unpacked — não verificado (sem acesso a navegador neste ambiente)
+- [x] Atualizar `CLAUDE.md`: remover menção à YouTube API key hardcoded
 
 ---
 
