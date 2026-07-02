@@ -592,7 +592,7 @@ Esperado: mesmo JSON de resposta com `resposta` e `comentarios_fonte`.
 
 ```javascript
 // Linha 1 — mantém a existente:
-const API_KEY = 'AIzaSyAXW2IrV4EsHfoVSxTXLUDnJioUMdcUZ_w';
+const API_KEY = '<CHAVE-REMOVIDA-REVOGADA>';
 
 // Adicionar logo abaixo:
 const BACKEND_URL = 'https://SEU-PROJETO.vercel.app'; // ← substitua pela URL do seu deploy

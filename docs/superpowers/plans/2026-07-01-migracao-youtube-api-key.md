@@ -673,7 +673,7 @@ export const BACKEND_URL = '';
 
 Substituir:
 ```js
-export const API_KEY = 'AIzaSyAXW2IrV4EsHfoVSxTXLUDnJioUMdcUZ_w';
+export const API_KEY = '<CHAVE-REMOVIDA-REVOGADA>';
 export const BACKEND_URL = 'http://localhost:3000';
 ```
 por:
