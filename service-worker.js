@@ -1,98 +1,34 @@
-import { API_KEY, BACKEND_URL } from './config.js';
-
-const MAX_COMMENTS = 500;
-const MAX_PAGES = 5;
+import { BACKEND_URL } from './config.js';
 
 console.log('Service Worker do YouTube Comment Q&A iniciado');
 
-async function fetchComments(videoId, apiKey, onProgress = null) {
+async function fetchCommentsFromBackend(videoId, onProgress = null) {
     console.log(`Iniciando coleta de comentários para o vídeo: ${videoId}`);
-    
-    const allComments = [];
-    let nextPageToken = null;
-    let pageCount = 0;
-    let totalCommentsCollected = 0;
-    
+
+    if (onProgress) {
+        onProgress(1, 0);
+    }
+
     try {
-        do {
-            pageCount++;
-            console.log(`Buscando página ${pageCount}...`);
-            
-            if (onProgress) {
-                onProgress(pageCount, totalCommentsCollected);
-            }
-            
-            const url = new URL('https://www.googleapis.com/youtube/v3/commentThreads');
-            url.searchParams.append('part', 'snippet');
-            url.searchParams.append('videoId', videoId);
-            url.searchParams.append('key', apiKey);
-            url.searchParams.append('maxResults', '100');
-            url.searchParams.append('order', 'relevance');
-            
-            if (nextPageToken) {
-                url.searchParams.append('pageToken', nextPageToken);
-            }
-            
-            const response = await fetch(url.toString());
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Erro na API: ${response.status} - ${errorData.error?.message || 'Erro desconhecido'}`);
-            }
-            
-            const data = await response.json();
-            if (data.items && data.items.length > 0) {
-                const comments = data.items.map(item => {
-                    const snippet = item.snippet.topLevelComment.snippet;
-                    return {
-                        id: item.id,
-                        author: snippet.authorDisplayName,
-                        text: snippet.textDisplay,
-                        textOriginal: snippet.textOriginal,
-                        likeCount: snippet.likeCount,
-                        publishedAt: snippet.publishedAt,
-                        updatedAt: snippet.updatedAt
-                    };
-                });
-                
-                allComments.push(...comments);
-                totalCommentsCollected += comments.length;
-                
-                console.log(`Página ${pageCount}: ${comments.length} comentários coletados (Total: ${totalCommentsCollected})`);
-            }
-            
-            // Verificar próxima página
-            nextPageToken = data.nextPageToken || null;
-            
-            // Verificar limites de segurança
-            if (totalCommentsCollected >= MAX_COMMENTS) {
-                console.warn(`Limite de ${MAX_COMMENTS} comentários atingido. Parando coleta.`);
-                break;
-            }
-            
-            if (pageCount >= MAX_PAGES) {
-                console.warn(`Limite de ${MAX_PAGES} páginas atingido. Parando coleta.`);
-                break;
-            }
-            
-            // Pequeno delay entre requisições para evitar rate limiting
-            if (nextPageToken) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
-        } while (nextPageToken);
-        
-        console.log(`Coleta finalizada: ${totalCommentsCollected} comentários em ${pageCount} páginas`);
-        
+        const response = await fetch(`${BACKEND_URL}/api/comments?videoId=${encodeURIComponent(videoId)}`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Erro HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log(`Coleta finalizada: ${data.totalComments} comentários em ${data.pagesCollected} páginas`);
+
         return {
             success: true,
             videoId: videoId,
-            comments: allComments,
-            totalComments: totalCommentsCollected,
-            pagesCollected: pageCount,
-            limitReached: totalCommentsCollected >= MAX_COMMENTS || pageCount >= MAX_PAGES
+            comments: data.comments,
+            totalComments: data.totalComments,
+            pagesCollected: data.pagesCollected,
+            limitReached: data.limitReached
         };
-        
     } catch (error) {
         console.error('Erro ao buscar comentários:', error);
         return {
@@ -141,24 +77,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
         (async () => {
             try {
-                if (API_KEY === 'SUA_CHAVE_API_AQUI') {
-                    console.warn('⚠️ API Key não configurada! Configure a API_KEY no service-worker.js');
-                    chrome.runtime.sendMessage({
-                        type: 'COMMENTS_ERROR',
-                        error: 'API Key não configurada. Edite o arquivo service-worker.js',
-                        videoId: videoId
-                    }, () => {
-                        if (chrome.runtime.lastError) {
-                            console.log('Popup não está aberto:', chrome.runtime.lastError.message);
-                        }
-                    });
-                    
-                    sendResponse({ success: false, error: 'API Key não configurada' });
-                    return;
-                }
-                
                 console.log('Iniciando busca de comentários...');
-                
+
                 const onProgress = (currentPage, totalCollected) => {
                     chrome.runtime.sendMessage({
                         type: 'COLLECTING_STATUS',
@@ -171,8 +91,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         }
                     });
                 };
-                
-                const result = await fetchComments(videoId, API_KEY, onProgress);
+
+                const result = await fetchCommentsFromBackend(videoId, onProgress);
                 
                 if (result.success) {
                     console.log('✅ Comentários coletados com sucesso:', result);
@@ -308,7 +228,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
         console.log('✅ Extensão YouTube Comment Q&A instalada com sucesso!');
-        console.log('⚠️ Não esqueça de configurar a API_KEY no service-worker.js');
     } else if (details.reason === 'update') {
         console.log('🔄 Extensão YouTube Comment Q&A atualizada!');
     }
