@@ -13,7 +13,6 @@
     "storage"
   ],
   "host_permissions": [
-    "https://www.googleapis.com/*",
     "https://*.vercel.app/*"
   ],
   "background": {
