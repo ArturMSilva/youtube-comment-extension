@@ -41,7 +41,7 @@ async function fetchCommentsFromBackend(videoId, onProgress = null) {
     }
 }
 
-async function callLLM(question, comments) {
+async function callLLM(question, comments, videoId) {
   console.log(`Chamando backend para ${comments.length} comentários`);
 
   const payload = {
@@ -50,7 +50,8 @@ async function callLLM(question, comments) {
       id: c.id,
       text: c.textOriginal || c.text,
       likeCount: c.likeCount || 0
-    }))
+    })),
+    videoId: videoId
   };
 
   const response = await fetch(`${BACKEND_URL}/api/ask`, {
@@ -185,7 +186,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
                 
                 console.log('Chamando LLM...');
-                const response = await callLLM(question, comments);
+                const response = await callLLM(question, comments, videoId);
                 
                 console.log('✅ Resposta do LLM gerada com sucesso');
                 chrome.runtime.sendMessage({
