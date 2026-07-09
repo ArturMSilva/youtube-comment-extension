@@ -20,6 +20,9 @@ TCC/
 └── youtube-comment-backend/              ← Sibling repo — Vercel serverless backend
     ├── api/ask.ts                        ← POST /api/ask
     ├── api/comments.ts                   ← GET /api/comments?videoId=
+    ├── db/schema.ts                      ← Schema Drizzle (interacoes, interacao_comentarios)
+    ├── lib/db.ts                         ← Client Neon HTTP + Drizzle
+    ├── lib/persistence.ts                ← salvarInteracao (base de pesquisa)
     ├── lib/retrieval.ts                  ← Keyword + semantic RAG filter, dispatcher
     ├── lib/embeddings.ts                 ← Gemini embeddings (semantic search)
     ├── lib/youtube.ts                    ← YouTube Data API pagination
@@ -55,7 +58,7 @@ npx vitest run tests/retrieval.test.ts
 1. **content.js** detects `?v=` in the YouTube URL and sends `VIDEO_ID_FOUND` to the service worker via `chrome.runtime.sendMessage`.
 2. **popup.js** triggers `START_COMMENT_COLLECTION` → **service-worker.js** calls `GET {BACKEND_URL}/api/comments?videoId=` → backend fetches comments from the YouTube Data API (`/commentThreads`) in pages of 100, up to 500 comments / 5 pages, and returns them all at once. The extension never talks to `googleapis.com` directly and never holds a YouTube API key.
 3. When the user asks a question, popup.js sends `ASK_LLM { question, comments, videoId }` to the service worker.
-4. **service-worker.js** → `POST /api/ask` on the Vercel backend → receives `{ resposta, comentarios_fonte[] }` → sends `LLM_RESPONSE` back to popup.
+4. **service-worker.js** → `POST /api/ask` com `{ pergunta, comentarios, videoId }` → receives `{ resposta, comentarios_fonte[] }` → sends `LLM_RESPONSE` back to popup. O `videoId` é opcional e existe só para o backend persistir a interação.
 5. **popup.js** renders the answer in `#llm-response` and source comment cards in `#source-list`.
 
 ### Backend Pipeline (api/ask.ts)
@@ -90,6 +93,7 @@ The prompt instructs the model to end its response with `FONTES: [1, 3, 7]` (1-b
 | `GROQ_API_KEY` | Vercel dashboard (never in code) | Groq API authentication |
 | `GEMINI_API_KEY` | Vercel dashboard (never in code) | Gemini embeddings for semantic search (`method: 'semantic'`) |
 | `YOUTUBE_API_KEY` | Vercel dashboard (never in code) | YouTube Data API authentication, used only by `/api/comments` |
+| `DATABASE_URL` | Vercel dashboard (never in code) | Postgres no Neon — persistência das interações |
 
 Local dev: add to `youtube-comment-backend/.env` (gitignored).
 
