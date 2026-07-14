@@ -51,7 +51,8 @@ async function callLLM(question, comments, videoId) {
       text: c.textOriginal || c.text,
       likeCount: c.likeCount || 0
     })),
-    videoId: videoId
+    videoId: videoId,
+    compare: true
   };
 
   const response = await fetch(`${BACKEND_URL}/api/ask`, {
