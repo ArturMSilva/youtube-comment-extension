@@ -20,6 +20,9 @@ out/
 .superpowers/
 .claude/settings.local.json
 
+# Documentação local (não versionada)
+docs/
+
 # Python
 __pycache__/
 *.py[cod]
