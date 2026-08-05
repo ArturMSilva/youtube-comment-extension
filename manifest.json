@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Comment Q&A",
+  "name": "CommentLens",
   "version": "1.0.0",
   "description": "Analise comentários de vídeos do YouTube para responder perguntas",
   "action": {

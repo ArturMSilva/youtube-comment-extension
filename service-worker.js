@@ -1,6 +1,6 @@
 import { BACKEND_URL } from './config.js';
 
-console.log('Service Worker do YouTube Comment Q&A iniciado');
+console.log('Service Worker do CommentLens iniciado');
 
 async function fetchCommentsFromBackend(videoId, onProgress = null) {
     console.log(`Iniciando coleta de comentários para o vídeo: ${videoId}`);
@@ -229,9 +229,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
-        console.log('✅ Extensão YouTube Comment Q&A instalada com sucesso!');
+        console.log('✅ Extensão CommentLens instalada com sucesso!');
     } else if (details.reason === 'update') {
-        console.log('🔄 Extensão YouTube Comment Q&A atualizada!');
+        console.log('🔄 Extensão CommentLens atualizada!');
     }
 });
 

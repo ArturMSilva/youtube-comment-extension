@@ -68,4 +68,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
 });
 
-console.log('Content script do YouTube Comment Q&A carregado');
+console.log('Content script do CommentLens carregado');
