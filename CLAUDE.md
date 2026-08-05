@@ -78,7 +78,7 @@ Request → CORS check → input validation → selectRelevantComments(method, .
 
 **Keyword (default):** keywords are extracted from the question (words > 3 chars). Comments are scored by keyword frequency. If no matches, falls back to top-N by like count.
 
-**Semantic:** the question and all comments are embedded via Gemini `text-embedding-004` (`lib/embeddings.ts`); comments are ranked by cosine similarity to the question.
+**Semantic:** the question and all comments are embedded via Gemini `gemini-embedding-001` (`lib/embeddings.ts`); comments are ranked by cosine similarity to the question.
 
 Both methods send at most 30 comments to the LLM.
 
