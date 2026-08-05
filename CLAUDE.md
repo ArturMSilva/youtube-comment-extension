@@ -58,7 +58,7 @@ npx vitest run tests/retrieval.test.ts
 1. **content.js** detects `?v=` in the YouTube URL and sends `VIDEO_ID_FOUND` to the service worker via `chrome.runtime.sendMessage`.
 2. **popup.js** triggers `START_COMMENT_COLLECTION` → **service-worker.js** calls `GET {BACKEND_URL}/api/comments?videoId=` → backend fetches comments from the YouTube Data API (`/commentThreads`) in pages of 100, up to 500 comments / 5 pages, and returns them all at once. The extension never talks to `googleapis.com` directly and never holds a YouTube API key.
 3. When the user asks a question, popup.js sends `ASK_LLM { question, comments, videoId }` to the service worker.
-4. **service-worker.js** → `POST /api/ask` com `{ pergunta, comentarios, videoId }` → receives `{ resposta, comentarios_fonte[] }` → sends `LLM_RESPONSE` back to popup. O `videoId` é opcional e existe só para o backend persistir a interação.
+4. **service-worker.js** → `POST /api/ask` com `{ pergunta, comentarios, videoId, compare: true }` → receives `{ resposta, comentarios_fonte[] }` → sends `LLM_RESPONSE` back to popup. O `videoId` é opcional e existe só para o backend persistir a interação. O `compare: true` faz o backend rodar keyword **e** semantic sobre a mesma entrada e gravar as duas interações com o mesmo `par_id` (coleta pareada do TCC) — a resposta devolvida é a do método semântico.
 5. **popup.js** renders the answer in `#llm-response` and source comment cards in `#source-list`.
 
 ### Backend Pipeline (api/ask.ts)
@@ -73,6 +73,8 @@ Request → CORS check → input validation → selectRelevantComments(method, .
 ```
 
 `method: 'keyword' | 'semantic'` in the request body picks the filter (default `keyword`). If the semantic path fails to reach Gemini, the endpoint returns an explicit `502` — no silent fallback to keyword.
+
+`compare: true` overrides `method` and runs both filters over the same input (`Promise.allSettled`), persisting both interactions under one `par_id`. The extension always sends it, so `GEMINI_API_KEY` is required in production. The semantic result is returned; if only keyword succeeded, its result comes back with an extra `aviso` field; if both fail, `502`.
 
 ### RAG Strategy (lib/retrieval.ts)
 
