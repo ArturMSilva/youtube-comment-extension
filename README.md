@@ -301,7 +301,7 @@ A interface (**CommentLens**) tem dois estados:
 
   [resposta do modelo]
 
-  Comentários que confirmam
+  Comentários fonte:
   ┌─────────────────────────────┐
   │ "texto do comentário…"      │
   │ ♥ 42 curtidas               │
