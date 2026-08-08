@@ -8,6 +8,10 @@ const STATUS_ICONS = {
 const START_ICON_INITIAL = '<svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const START_ICON_AGAIN = '<svg class="btn-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+// Mesmo limite aplicado pelo backend em api/ask.ts (a pergunta é truncada em 500 caracteres)
+const MAX_QUESTION_LENGTH = 500;
+const NEAR_LIMIT_THRESHOLD = 450;
+
 function renderSourceComments(comentarios) {
   const container = document.getElementById('source-comments');
   const list = document.getElementById('source-list');
@@ -59,6 +63,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const questionInput = document.getElementById('question-input');
     const askButton = document.getElementById('ask-llm');
     const llmResponse = document.getElementById('llm-response');
+    const charCounter = document.getElementById('char-counter');
+    const charCount = document.getElementById('char-count');
+
+    // Mantém o contador "n/500" em sincronia com o textarea
+    function updateCharCounter() {
+        const usados = questionInput.value.length;
+        charCount.textContent = usados;
+        charCounter.classList.toggle('at-limit', usados >= MAX_QUESTION_LENGTH);
+        charCounter.classList.toggle(
+            'near-limit',
+            usados >= NEAR_LIMIT_THRESHOLD && usados < MAX_QUESTION_LENGTH
+        );
+    }
 
     // Atualiza a mensagem de status aplicando o estilo do estado (neutral | loading | success | error)
     function updateStatus(message, state = 'neutral') {
@@ -152,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function hideQAInterface() {
         qaInterface.classList.add('hidden');
         questionInput.value = '';
+        updateCharCounter();
         llmResponse.textContent = '';
         llmResponse.classList.remove('loading');
         renderSourceComments([]); // limpa os cards de fonte
@@ -200,6 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startButton.addEventListener('click', handleStartAnalysis);
     askButton.addEventListener('click', handleAskLLM);
+    questionInput.addEventListener('input', updateCharCounter);
+    updateCharCounter(); // estado inicial (0/500)
     questionInput.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();

@@ -221,7 +221,7 @@ h2 {
     border: 1px solid rgba(255, 255, 255, 0.09);
     border-radius: 10px;
     resize: none;
-    margin-bottom: 12px;
+    margin-bottom: 5px;
     color: var(--cl-text);
     background: var(--cl-input);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -235,6 +235,23 @@ h2 {
 
 .input-question::placeholder {
     color: #5B635F;
+}
+
+.char-counter {
+    margin-bottom: 12px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--cl-text-dimmer);
+    transition: color 0.2s ease;
+}
+
+.char-counter.near-limit {
+    color: var(--cl-green-soft);
+}
+
+.char-counter.at-limit {
+    color: var(--cl-red-soft);
 }
 
 /* ---------- Response ---------- */

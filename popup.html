@@ -48,7 +48,11 @@
                 class="input-question"
                 placeholder="Digite sua pergunta sobre os comentários…"
                 rows="3"
+                maxlength="500"
             ></textarea>
+
+            <!-- O backend trunca a pergunta em 500 caracteres; o contador deixa o limite visível -->
+            <div class="char-counter" id="char-counter"><span id="char-count">0</span>/500</div>
 
             <button id="ask-llm" class="btn-secondary">
                 <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
