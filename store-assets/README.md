@@ -20,9 +20,11 @@ Arquivos prontos para o formulário de publicação (aba **Loja** → *Recursos 
   review com capítulo "Bateria/Autonomia/Recarga", que casa com a pergunta do popup), desfocada e
   escurecida; por cima, o popup do TCC (`tcc-comment-lens/imagens/tela-03-resposta.png`) emoldurado
   com sombra e borda verde.
-- Tudo renderizado em HTML + Chrome headless. Os fontes ficaram em
-  `%TEMP%\claude\...\scratchpad\` (`icon.html`, `shot1.html`, `shot2.html`, `promo440.html`,
-  `promo1400.html`) — se precisar refazer, é só reabrir e re-renderizar.
+- Tudo renderizado em HTML + Chrome headless. Os fontes desta pasta (`icon.html`, `shot1.html`,
+  `shot2.html`, `promo440.html`, `promo1400.html`) ficaram só em diretório temporário e **não
+  existem mais** — refazer qualquer um destes assets significa remontar o HTML do zero.
+- O popup que aparece nos prints, esse sim, tem fonte versionada: os HTML/CSS que geram
+  `tela-0*.png` estão em `tcc-comment-lens/imagens/telas-fonte/`, com o `gerar.sh` do diretório.
 
 ## Atenção antes de enviar
 
