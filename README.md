@@ -378,7 +378,7 @@ Fundamentação completa: `youtube-comment-backend/docs/comparacao-keyword-vs-se
 | Parâmetro | Valor | Justificativa |
 |---|---|---|
 | Modelo primário | `llama-3.3-70b-versatile` | Boa compreensão de português |
-| Modelo fallback | `mixtral-8x7b-32768` | Ativado em rate limit (HTTP 429) |
+| Modelo fallback | `qwen/qwen3-32b` | Ativado em rate limit (HTTP 429) |
 | Temperatura | `0.3` | Respostas mais determinísticas e factuais |
 | Max tokens | `1024` | Suficiente para 2–4 frases + linha FONTES |
 
