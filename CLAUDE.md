@@ -67,7 +67,7 @@ npx vitest run tests/retrieval.test.ts
 Request → CORS check → input validation → selectRelevantComments(method, ...)
         → keyword: filterRelevantComments (top-30 by keyword score)
         → semantic: semanticFilterComments (top-30 by cosine similarity over Gemini embeddings)
-        → askGroq (llama-3.3-70b-versatile, fallback: mixtral-8x7b-32768 on 429)
+        → askGroq (llama-3.3-70b-versatile, fallback: qwen/qwen3-32b on 429)
         → parseResponse (extracts FONTES: [1,3] indices from LLM output)
         → { resposta, comentarios_fonte[] }
 ```
