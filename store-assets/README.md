@@ -9,7 +9,10 @@ Arquivos prontos para o formulário de publicação (aba **Loja** → *Recursos 
 | `screenshot-2-1280x800.png` | 1280×800 | Captura de tela 2 (comentários-fonte) | não |
 | `promo-pequeno-440x280.png` | 440×280 | Bloco promocional pequeno | não |
 | `promo-marquee-1400x560.png` | 1400×560 | Bloco promocional marquee | não |
-| `icon-16/32/48.png` | — | Ícones da barra do Chrome (`manifest.json`) | não |
+| `icon-16/32/48.png` | — | Cópias antigas; os ícones que o Chrome usa ficam em `icons/` | não |
+
+Os ícones declarados no `manifest.json` vivem em `icons/` (16/32/48/128) e são gerados por
+`store-assets/icon-fonte/gerar.sh` — veja o README daquela pasta.
 
 ## Como foram gerados
 

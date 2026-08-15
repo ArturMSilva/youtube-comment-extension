@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ícone CommentLens</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+  }
+  #tile {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(155deg, #1A211E 0%, #0D100F 68%);
+    border: var(--borda) solid rgba(43, 224, 124, 0.30);
+    border-radius: var(--raio);
+    width: var(--lado);
+    height: var(--lado);
+  }
+  #tile svg {
+    display: block;
+    width: var(--arte);
+    height: var(--arte);
+    /* deslocamento óptico: a "cauda" do balão puxa o peso para baixo-esquerda */
+    margin-top: calc(var(--arte) * -0.03);
+  }
+</style>
+</head>
+<body>
+  <div id="tile">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+            stroke="#2BE07C" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+<script>
+  // Cada tamanho tem sua própria proporção: quanto menor o canvas, menos margem
+  // e traço proporcionalmente mais grosso, para o balão continuar legível.
+  const PERFIS = {
+    16:  { tile: 1.00, arte: 0.80, traco: 2.9, raio: 0.24, borda: 0 },
+    32:  { tile: 0.97, arte: 0.68, traco: 2.5, raio: 0.24, borda: 1 },
+    48:  { tile: 0.94, arte: 0.62, traco: 2.3, raio: 0.24, borda: 1 },
+    128: { tile: 0.75, arte: 0.60, traco: 2.0, raio: 0.24, borda: 1 },
+  };
+
+  const params = new URLSearchParams(location.search);
+  const size = Number(params.get('size')) || 128;
+  // `px` permite desenhar num canvas maior que o tamanho final (supersampling):
+  // o Chrome headless devolve captura vazia em janelas de exatamente 128×128,
+  // então o ícone de 128 é renderizado em 512 e reduzido depois.
+  const canvas = Number(params.get('px')) || size;
+  const p = PERFIS[size] || PERFIS[128];
+  const lado = canvas * p.tile;
+
+  const raiz = document.documentElement.style;
+  raiz.setProperty('--lado', lado + 'px');
+  raiz.setProperty('--arte', lado * p.arte + 'px');
+  raiz.setProperty('--raio', lado * p.raio + 'px');
+  raiz.setProperty('--borda', p.borda * (canvas / size) + 'px');
+
+  document.querySelector('svg path').setAttribute('stroke-width', p.traco);
+</script>
+</body>
+</html>
